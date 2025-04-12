@@ -1,9 +1,10 @@
 package com.example.myapplication
 
+import VideoOverlayHelper
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
-import android.os.Build
 import android.Manifest
+import android.net.Uri
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -24,12 +25,13 @@ import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.StaticOverlaySettings
 import androidx.media3.transformer.EditedMediaItem
-import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import  androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Effects
 import androidx.media3.transformer.Composition
 import java.io.File
+import androidx.core.net.toUri
+import androidx.media3.transformer.ExportException
 
 class MainActivity : ComponentActivity() , Transformer.Listener {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,63 +74,6 @@ class MainActivity : ComponentActivity() , Transformer.Listener {
         }
     }
 
-    @OptIn(UnstableApi::class)
-    fun combineVideoWithImage(
-        videoPath: String,
-        imagePath: String,
-        outputFilePath: String,
-        onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
-    ) {
-        val overlayBitmap = BitmapFactory.decodeFile(imagePath)
-        if (overlayBitmap == null) {
-            onError("Failed to decode image from path: $imagePath")
-            return
-        }
-
-        val overlaySettings = StaticOverlaySettings.Builder()
-            .setOverlayFrameAnchor(0.5f, 1f) // Center horizontally, bottom vertically
-            .build()
-
-        val bitmapOverlay = BitmapOverlay.createStaticBitmapOverlay(overlayBitmap, overlaySettings)
-
-        val overlayEffect = OverlayEffect(listOf(bitmapOverlay))
-
-        val effects = Effects(
-            listOf(),
-            listOf(overlayEffect)
-        )
-
-        val mediaItem = MediaItem.fromUri(videoPath)
-
-        val editedMediaItem = EditedMediaItem.Builder(mediaItem)
-            .setEffects(effects)
-            .build()
-        val ctx = this.applicationContext
-        val transformer = Transformer.Builder(ctx)
-            .addListener(object : Transformer.Listener {
-                override fun onCompleted(
-                    composition: androidx.media3.transformer.Composition,
-                    exportResult: ExportResult
-                ) {
-                    onSuccess(outputFilePath)
-                }
-
-                override fun onError(
-                    composition: Composition,
-                    exportResult: ExportResult,
-                    exportException: ExportException
-                ) {
-                    onError(exportException.message ?: "Unknown error")
-                }
-            })
-            .build()
-
-        transformer.start(editedMediaItem, outputFilePath)
-    }
-
-
-
 
 
 
@@ -169,22 +114,30 @@ class MainActivity : ComponentActivity() , Transformer.Listener {
         }
     }
 
+    @OptIn(UnstableApi::class)
     fun processVideo() {
-        // Define the file paths
-        val videoPath = "/storage/emulated/0/test.mp4"
-        val imagePath = "/storage/emulated/0/DSC_1695.JPG"
+
         val outputPath = File("/storage/emulated/0/").resolve("output_video.mp4").absolutePath
 
         // Create an instance of MainActivity to access its methods
-        val activity = MainActivity()
 
-        activity.combineVideoWithImage(videoPath, imagePath, outputPath,
-            onSuccess = { path ->
+        VideoOverlayHelper(applicationContext).combineVideoWithImage(
+            "android.resource://packageName/raw/test.mp4",
+            "android.resource://packageName/drawable/image.jpg",
+            outputPath,
+
+           errorCallback = {
+                // Handle error
+                println("Error: $it")
 
             },
-            onError = { errorMessage ->
-                println("Error: $errorMessage")
-            })
+            successCallback = {
+                // Handle success
+                println("Success: $it")
+
+            }
+
+        )
     }
 
     @Preview(showBackground = true)
