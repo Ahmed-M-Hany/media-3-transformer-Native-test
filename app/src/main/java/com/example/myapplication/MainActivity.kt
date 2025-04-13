@@ -5,8 +5,9 @@ import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.Manifest
 import android.net.Uri
-
 import android.os.Bundle
+import android.os.Environment
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
@@ -26,16 +27,20 @@ import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.StaticOverlaySettings
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.ExportResult
-import  androidx.media3.transformer.Transformer
+import androidx.media3.transformer.Transformer
 import androidx.media3.transformer.Effects
 import androidx.media3.transformer.Composition
 import java.io.File
 import androidx.core.net.toUri
 import androidx.media3.transformer.ExportException
 
-class MainActivity : ComponentActivity() , Transformer.Listener {
+@UnstableApi
+class MainActivity : ComponentActivity() {
+    private lateinit var videoOverlayHelper: VideoOverlayHelper
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        videoOverlayHelper = VideoOverlayHelper(this)
         setContent {
             VideoOverlayScreen()
         }
@@ -74,8 +79,32 @@ class MainActivity : ComponentActivity() , Transformer.Listener {
         }
     }
 
+    @OptIn(UnstableApi::class)
+    private fun processVideo() {
+        // Example paths - replace with your actual video and image paths
+        val videoPath = "/storage/emulated/0/Download/test.mp4"
+        val imagePath = "/storage/emulated/0/Download/image.jpg"
+        val outputPath = "${getExternalFilesDir(Environment.DIRECTORY_MOVIES)}/output.mp4"
 
+        videoOverlayHelper.combineVideoWithImage(
+            videoPath = videoPath,
+            imagePath = imagePath,
+            outputFilePath = outputPath,
+            successCallback = { outputPath ->
+                // Handle success
+                runOnUiThread {
+                    Log.d("TESSSET", "\"Video processed successfully! Output: $outputPath\": ")
 
+                }
+            },
+            errorCallback = { errorMessage ->
+                // Handle error
+                runOnUiThread {
+                    Log.d("TESSSET", "\"Error processing video: $errorMessage\": ")
+                }
+            }
+        )
+    }
 
     @Composable
     fun VideoOverlayScreen() {
@@ -99,45 +128,19 @@ class MainActivity : ComponentActivity() , Transformer.Listener {
             Button(onClick = {
                 request1stPermission()
             }) {
-                Text(text = "1st Permission")
+                Text(text = "Request Image Permission")
             }
             Button(onClick = {
                 request2ndPermission()
             }) {
-                Text(text = "2nd Permission")
+                Text(text = "Request Video Permission")
             }
             Button(onClick = {
                 request3rdPermission()
             }) {
-                Text(text = "3rd Permission")
+                Text(text = "Request Audio Permission")
             }
         }
-    }
-
-    @OptIn(UnstableApi::class)
-    fun processVideo() {
-
-        val outputPath = File("/storage/emulated/0/").resolve("output_video.mp4").absolutePath
-
-        // Create an instance of MainActivity to access its methods
-
-        VideoOverlayHelper(applicationContext).combineVideoWithImage(
-            "android.resource://packageName/raw/test.mp4",
-            "android.resource://packageName/drawable/image.jpg",
-            outputPath,
-
-           errorCallback = {
-                // Handle error
-                println("Error: $it")
-
-            },
-            successCallback = {
-                // Handle success
-                println("Success: $it")
-
-            }
-
-        )
     }
 
     @Preview(showBackground = true)
